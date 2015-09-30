@@ -5,17 +5,21 @@
  */
 
 namespace Drupal\cloudflare;
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Psr\Log\LoggerInterface;
 
+use Drupal\Core\Url;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use CloudFlarePhpSdk\Exceptions\CloudFlareHttpException;
 use CloudFlarePhpSdk\Exceptions\CloudFlareApiException;
 use CloudFlarePhpSdk\ApiEndpoints\ZoneApi;
+use Psr\Log\LoggerInterface;
 
 /**
  * Invalidation methods for CloudFlare.
  */
 class Config implements CloudFlareConfigInterface {
+  use StringTranslationTrait;
+
   /*
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
@@ -46,6 +50,11 @@ class Config implements CloudFlareConfigInterface {
    */
   protected $logger;
 
+  /*
+   * @var \Drupal\cloudflare\StateInterface
+   */
+  protected $state;
+
   /**
    * CloudFlareInvalidator constructor.
    *
@@ -53,16 +62,19 @@ class Config implements CloudFlareConfigInterface {
    *   The config factory.
    * @param \Psr\Log\LoggerInterface $logger
    *   A logger instance.
+   * @param \Drupal\cloudflare\CloudFlareStateInterface $state
+   *   Tracks rate limits associated with CloudFlare Api.
    */
-  public function __construct(ConfigFactoryInterface $config, LoggerInterface $logger) {
+  public function __construct(ConfigFactoryInterface $config, LoggerInterface $logger, CloudFlareStateInterface $state) {
     $this->config = $config->get('cloudflare.settings');
     $this->logger = $logger;
+    $this->state = $state;
 
     $this->apiKey = $this->config->get('apikey');
     $this->email = $this->config->get('email');
     $this->zoneApi = new ZoneApi($this->apiKey, $this->email);
-    if ($this->hasValidApiCredentials()) {
-      $this->zone = $this->getCurrentZoneId();
+    if ($this->hasApiCredentials()) {
+      $this->zone = $this->getZoneId();
     }
   }
 
@@ -83,7 +95,7 @@ class Config implements CloudFlareConfigInterface {
   /**
    * {@inheritdoc}
    */
-  public function getCurrentZoneId() {
+  public function getZoneId() {
     $has_zone_in_cmi = !is_null($this->config->get('zone'));
 
     // If this is a multi-zone cloudflare account and a zone has been set.
@@ -98,16 +110,10 @@ class Config implements CloudFlareConfigInterface {
     // If there is no zone set and the account only has a single zone.
     try {
       $zones_from_api = $this->zoneApi->listZones();
+      $this->state->incrementApiRateCount();
     }
 
-    catch (CloudFlareHttpException $e) {
-      drupal_set_message("CloudFlare: Unable to list zones." . $e->getMessage(), 'error');
-      $this->logger->error($e->getMessage());
-      return NULL;
-    }
-
-    catch (CloudFlareApiException $e) {
-      drupal_set_message("CloudFlare: Unable to list zones." . $e->getMessage(), 'error');
+    catch (CloudFlareException $e) {
       $this->logger->error($e->getMessage());
       return NULL;
     }
@@ -125,10 +131,8 @@ class Config implements CloudFlareConfigInterface {
     // If the zone has multiple accounts and none is specified in CMI we cannot
     // move forward.
     if (!$is_single_zone_cloudflare_account) {
-      $link_to_settings = '/admin/config/services/cloudflare/zone';
-      $message = t('No default zone has been entered for CloudFlare. Please go <a href="@link_to_settings">here</a> to set.', ['@link_to_settings' => $link_to_settings]);
-
-      drupal_set_message($message, 'error');
+      $link_to_settings = Url::fromRoute('cloudflare.admin_settings_form')->toString();
+      $message = $this->t('No default zone has been entered for CloudFlare. Please go <a href="@link_to_settings">here</a> to set.', ['@link_to_settings' => $link_to_settings]);
       $this->logger->error($message);
       return NULL;
     }
@@ -137,12 +141,10 @@ class Config implements CloudFlareConfigInterface {
   /**
    * {@inheritdoc}
    */
-  public function hasValidApiCredentials() {
+  public function hasApiCredentials() {
     if (!isset($this->apiKey)) {
-      $link_to_settings = '/admin/config/services/cloudflare';
-      $message = t('No valid credentials have been entered for CloudFlare. Please go <a href="@link_to_settings">here</a> to set them.', ['@link_to_settings' => $link_to_settings]);
-
-      drupal_set_message($message, 'error');
+      $link_to_settings = Url::FromRoute('cloudflare.admin_settings_form')->toString();
+      $message = $this->t('No valid credentials have been entered for CloudFlare. Please go <a href="@link_to_settings">here</a> to set them.', ['@link_to_settings' => $link_to_settings]);
       $this->logger->error($message);
       return FALSE;
     }

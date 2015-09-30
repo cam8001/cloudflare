@@ -7,13 +7,15 @@
 
 namespace Drupal\cloudflare;
 use CloudFlarePhpSdk\ApiTypes\Zone\ZoneSettings;
-use CloudFlarePhpSdk\Exceptions\CloudFlareHttpException;
-use CloudFlarePhpSdk\Exceptions\CloudFlareApiException;
+use CloudFlarePhpSdk\Exceptions\CloudFlareException;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * Zone methods for CloudFlare.
  */
-class Zone implements CloudflareZoneInterface {
+class Zone implements CloudFlareZoneInterface {
+  use StringTranslationTrait;
+
   /*
    * @var \Drupal\cloudflare\Config
    */
@@ -39,8 +41,8 @@ class Zone implements CloudflareZoneInterface {
     $this->config = $config;
     $this->zoneApi = $config->getZoneApi();
 
-    if ($this->config->hasValidApiCredentials()) {
-      $this->zone = $this->config->getCurrentZoneId();
+    if ($this->config->hasApiCredentials()) {
+      $this->zone = $this->config->getZoneId();
     }
   }
 
@@ -48,7 +50,7 @@ class Zone implements CloudflareZoneInterface {
    * {@inheritdoc}
    */
   public function getZoneSettings() {
-    if (!$this->config->hasValidApiCredentials()) {
+    if (!$this->config->hasApiCredentials()) {
       return NULL;
     }
 
@@ -56,24 +58,17 @@ class Zone implements CloudflareZoneInterface {
       return $this->zoneApi->getZoneSettings($this->zone);
     }
 
-    catch (CloudFlareHttpException $e) {
-      drupal_set_message(t('Unable to get zone settings.') . $e->getMessage(), 'error');
+    catch (CloudFlareException $e) {
       $this->config->getLogger()->error($e->getMessage());
-      return NULL;
-    }
-
-    catch (CloudFlareApiException $e) {
-      drupal_set_message(t('Unable to get zone settings.') . $e->getMessage(), 'error');
-      $this->config->getLogger()->error($e->getMessage());
-      return NULL;
+      throw $e;
     }
   }
 
   /**
    * {@inheritdoc}
    */
-  public function updateZone(ZoneSettings $zone_settings) {
-    if (!$this->config->hasValidApiCredentials()) {
+  public function updateZoneSettings(ZoneSettings $zone_settings) {
+    if (!$this->config->hasApiCredentials()) {
       return;
     }
 
@@ -81,16 +76,9 @@ class Zone implements CloudflareZoneInterface {
       $this->zoneApi->updateZone($zone_settings);
     }
 
-    catch (CloudFlareHttpException $e) {
-      drupal_set_message(t('Unable to update zone settings.') . $e->getMessage(), 'error');
+    catch (CloudFlareException $e) {
       $this->config->getLogger()->error($e->getMessage());
-      return;
-    }
-
-    catch (CloudFlareApiException $e) {
-      drupal_set_message(t('Unable to update zone settings.') . $e->getMessage(), 'error');
-      $this->config->getLogger()->error($e->getMessage());
-      return;
+      throw $e;
     }
   }
 

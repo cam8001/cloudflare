@@ -7,34 +7,34 @@
 namespace Drupal\cloudflare;
 
 /**
- * Zone methods for CloudFlare.
+ * Config methods for CloudFlare.
  */
 interface CloudFlareConfigInterface {
   /**
-   * Determine the current Cloudflare ZoneId for the site.
+   * Determines the Cloudflare ZoneId for the site.
    *
    * Most CloudFlare accounts have a single zone. It can be assumed as the
    * default. If there is more than one the user needs to specify the zone.
    * on the cloudflare config page.
    *
    * @return string
-   *   The id of the current zone.
+   *   The id of the zone.
    */
-  public function getCurrentZoneId();
+  public function getZoneId();
 
   /**
-   * Gets the currently instantiated ZoneApi object for the site.
+   * Gets ZoneApi object for the domain.
    *
    * @return \CloudFlarePhpSdk\ApiEndpoints\ZoneApi
-   *   Instance of ZoneApi for the site.
+   *   Instance of ZoneApi for the domain.
    */
   public function getZoneApi();
 
   /**
-   * Gets the current logger.
+   * Gets logger.
    *
    * @return \Psr\Log\LoggerInterface
-   *   The current logger.
+   *   The logger.
    */
   public function getLogger();
 
@@ -44,6 +44,6 @@ interface CloudFlareConfigInterface {
    * @return bool|NULL
    *   TRUE if there are valid credentials.  FALSE otherwise.
    */
-  public function hasValidApiCredentials();
+  public function hasApiCredentials();
 
 }

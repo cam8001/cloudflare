@@ -1,8 +1,9 @@
-name: CloudFlare
+name: CloudFlare Purger
 type: module
 description: CloudFlare CDN integration.
 core: 8.x
-package: Web services
+package: Purge - reverse proxies & CDNs
 configure: cloudflare.admin_settings_form
 dependencies:
+  - cloudflare
   - purge

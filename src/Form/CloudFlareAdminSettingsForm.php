@@ -16,7 +16,6 @@ use Drupal\Core\Form\FormStateInterface;
  * @package Drupal\cloudflare\Form
  */
 class CloudFlareAdminSettingsForm extends ConfigFormBase {
-
   /**
    * {@inheritdoc}
    */
