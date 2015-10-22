@@ -13,7 +13,7 @@ CloudFlare API.  You can check it out here:  https://github.com/aweingarten/clou
 - Initialize it using the init.sh script (or drush composer-manager-init).
   This registers the module's Composer command for Drupal core.
 - Install the CloudFlare module.
-- Inside your core/ directory run composer drupal-update.
+- From the root directory of your Drupal install, run composer drupal-update.
     This rebuilds core/composer.json and downloads the new module's requirements.
 
 
